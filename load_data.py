@@ -1,6 +1,7 @@
 import torch
 from skimage import io, transform
 import numpy as np
+import pandas as pd
 from torch.utils.data import Dataset, DataLoader
 from torchvision import transforms
 from pdb import set_trace as stop
@@ -11,9 +12,9 @@ from dataloaders.coco80_dataset import Coco80Dataset
 from dataloaders.news500_dataset import NewsDataset
 from dataloaders.coco1000_dataset import Coco1000Dataset
 from dataloaders.cub312_dataset import CUBDataset
+from dataloaders.custom_dataset import CustomDataset
 import warnings
 warnings.filterwarnings("ignore")
-
 
 def get_data(args):
     dataset = args.dataset
@@ -29,6 +30,7 @@ def get_data(args):
     normTransform = transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
     scale_size = rescale
     crop_size = random_crop
+
     if args.test_batch_size == -1:
         args.test_batch_size = batch_size
     
@@ -53,6 +55,7 @@ def get_data(args):
     test_dataset = None
     test_loader = None
     drop_last = False
+
     if dataset == 'coco':
         coco_root = os.path.join(data_root,'coco')
         ann_dir = os.path.join(coco_root,'annotations_pytorch')
@@ -87,8 +90,8 @@ def get_data(args):
         train_img_root = os.path.join(data_dir,'train2014')
         test_img_root = os.path.join(data_dir,'val2014')
         
-        train_dataset = Coco1000Dataset(ann_dir, data_dir, split = 'train', transform = trainTransform,known_labels=args.train_known_labels,testing=False)
-        valid_dataset = Coco1000Dataset(ann_dir, data_dir, split = 'val', transform = testTransform,known_labels=args.test_known_labels,testing=True)
+        train_dataset = Coco1000Dataset(ann_dir, data_dir, split = 'train', transform = trainTransform, known_labels=args.train_known_labels,testing=False)
+        valid_dataset = Coco1000Dataset(ann_dir, data_dir, split = 'val', transform = testTransform, known_labels=args.test_known_labels,testing=True)
     
     elif dataset == 'vg':
         vg_root = os.path.join(data_root,'VG')
@@ -118,8 +121,8 @@ def get_data(args):
         drop_last=True
         ann_dir = '/bigtemp/jjl5sw/PartialMLC/data/bbc_data/'
 
-        train_dataset = NewsDataset(ann_dir, split = 'train', transform = trainTransform,known_labels=0,testing=False)
-        valid_dataset = NewsDataset(ann_dir, split = 'test', transform = testTransform,known_labels=args.test_known_labels,testing=True)
+        train_dataset = NewsDataset(ann_dir, split = 'train', transform = trainTransform, known_labels=0,testing=False)
+        valid_dataset = NewsDataset(ann_dir, split = 'test', transform = testTransform, known_labels=args.test_known_labels, testing=True)
     
     elif dataset=='voc':
         voc_root = os.path.join(data_root,'voc/VOCdevkit/VOC2007/')
@@ -175,16 +178,38 @@ def get_data(args):
         train_dataset = CUBDataset(image_dir, train_list, trainTransform,known_labels=args.train_known_labels,attr_group_dict=attr_group_dict,testing=False,n_groups=n_groups)
         valid_dataset = CUBDataset(image_dir, valid_list, testTransform,known_labels=args.test_known_labels,attr_group_dict=attr_group_dict,testing=True,n_groups=n_groups)
         test_dataset = CUBDataset(image_dir, test_list, testTransform,known_labels=args.test_known_labels,attr_group_dict=attr_group_dict,testing=True,n_groups=n_groups)
+
+    elif dataset == 'custom':
+
+        df = pd.read_csv('F:/C-Tran/data/new_ref_label.csv')
+        r_dir = 'F:/FID-300/FID-300/references'
+
+        trainTransform = transforms.Compose([transforms.Resize((638, 255)),
+                                        transforms.RandomHorizontalFlip(),
+                                        transforms.RandomVerticalFlip(),
+                                        transforms.RandomRotation(15),
+                                        transforms.RandomRotation(20), 
+                                        transforms.ToTensor(),
+                                        transforms.Normalize([0.485], [0.229])
+                                        ])
         
+        testTransform = transforms.Compose([transforms.Resize((638, 255)),
+                                        transforms.ToTensor(),
+                                        transforms.Normalize([0.485], [0.229])
+                                        ])
+
+        train_dataset = CustomDataset(df = df, split = 'train', image_transform = trainTransform, root_dir = r_dir, testing=False, known_labels=args.train_known_labels)
+        valid_dataset = CustomDataset(df = df, split = 'test', image_transform = testTransform, root_dir = r_dir, testing=True, known_labels=args.test_known_labels)
+
     else:
         print('no dataset avail')
         exit(0)
 
     if train_dataset is not None:
-        train_loader = DataLoader(train_dataset, batch_size=batch_size,shuffle=True, num_workers=workers,drop_last=drop_last)
+        train_loader = DataLoader(train_dataset, batch_size=batch_size,shuffle=True, num_workers=workers, drop_last=drop_last)
     if valid_dataset is not None:
-        valid_loader = DataLoader(valid_dataset, batch_size=args.test_batch_size,shuffle=False, num_workers=workers)
+        valid_loader = DataLoader(valid_dataset, batch_size=args.test_batch_size, shuffle=False, num_workers=workers)
     if test_dataset is not None:
-        test_loader = DataLoader(test_dataset, batch_size=args.test_batch_size,shuffle=False, num_workers=workers)
+        test_loader = DataLoader(test_dataset, batch_size=args.test_batch_size, shuffle=False, num_workers=workers)
 
     return train_loader,valid_loader,test_loader

@@ -271,8 +271,8 @@ def mean_avg_precision(true_targets, predictions, axis=0):
 def custom_mean_avg_precision(all_targets, all_predictions, unknown_label_mask):
     APs = []
     for label_idx in range(all_targets.size(1)):
-        all_targets_unk = torch.masked_select(all_targets[:,label_idx],unknown_label_mask[:,label_idx].type(torch.ByteTensor))
-        all_predictions_unk = torch.masked_select(all_predictions[:,label_idx],unknown_label_mask[:,label_idx].type(torch.ByteTensor))
+        all_targets_unk = torch.masked_select(all_targets[:,label_idx],unknown_label_mask[:,label_idx].type(torch.bool))
+        all_predictions_unk = torch.masked_select(all_predictions[:,label_idx],unknown_label_mask[:,label_idx].type(torch.bool))
         if len(all_targets_unk)>0 and all_targets_unk.sum().item() > 0:
             AP = metrics.average_precision_score(all_targets_unk, all_predictions_unk, average=None, pos_label=1)
             APs.append(AP)
