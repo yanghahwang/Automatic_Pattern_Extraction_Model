@@ -97,4 +97,3 @@ class CustomDataset(Dataset):
         sample['imageIDs'] = name    
 
         return sample
-

@@ -119,6 +119,7 @@ def compute_metrics(args,all_predictions,all_targets,all_masks,loss,loss_unk,ela
             print('OF1_t3:{:0.1f}'.format(OF1_top3*100)) 
 
     metrics_dict = {}
+
     metrics_dict['mAP'] = meanAP
     metrics_dict['ACC'] = ACC
     metrics_dict['HA'] = HA
