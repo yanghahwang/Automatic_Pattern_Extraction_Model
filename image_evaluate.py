@@ -1,39 +1,35 @@
 import os
 import torch
+import argparse
 import matplotlib.pyplot as plt
-from dataloaders.custom_dataset import mlb
+from torchvision import models
 from sklearn.preprocessing import MultiLabelBinarizer
+from load_data import get_data
 
-
-def evaluate(model, test_loader, device, save_path='./saved_images'):
-    model.eval()
+def evaluate(model_path, test_loader, save_path='./saved_images'):
+    loaded_model = torch.load(model_path, map_location=torch.device('cpu'))  # CPU로 로드
+    loaded_model = loaded_model.eval()
     
-    # Ensure the save_path directory exists
     os.makedirs(save_path, exist_ok=True)
     
     with torch.no_grad():
-        for i, (images, labels) in enumerate(test_loader):
-            # if i >= max_images:
-            #     break  
-            images = images.to(device)
-            labels = labels.to(device)
+        for i, sample in enumerate(test_loader):
+            images = sample['image']
+            labels = sample['labels']
             
-            outputs = model(images)
+            outputs = loaded_model(images)
             predicted = (outputs > 0.5).float()  
 
             for idx in range(len(images)):
-                # if idx >= max_images:
-                #     break 
-                image = images[idx].cpu().numpy()  
-                true_label = labels[idx].cpu().numpy()  
+                image = images[idx].numpy()  
+                true_label = labels[idx].numpy()  
                 
-                decoded_label = mlb.inverse_transform(true_label.reshape(1, -1))[0]
+                decoded_label = true_label
                 
-                predicted_label_encoded = predicted[idx].cpu().numpy()  
-               
-                predicted_label_decoded = mlb.inverse_transform(predicted_label_encoded.reshape(1, -1))[0]
+                predicted_label_encoded = predicted[idx].numpy()  
                 
-                # Save the image to a file
+                predicted_label_decoded = predicted_label_encoded
+
                 image_filename = f'batch_{i}_image_{idx}.jpeg'
                 image_path = os.path.join(save_path, image_filename)
                 plt.imshow(image.transpose(1, 2, 0))  
@@ -42,4 +38,4 @@ def evaluate(model, test_loader, device, save_path='./saved_images'):
                 plt.axis('off')
                 plt.tight_layout()
                 plt.savefig(image_path)
-                plt.show()
+

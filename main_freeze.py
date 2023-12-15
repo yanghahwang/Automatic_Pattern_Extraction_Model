@@ -11,6 +11,7 @@ from optim_schedule import WarmupLinearSchedule
 from run_epoch import run_epoch
 from load_data import get_data
 from multiprocessing import freeze_support
+from image_evaluate import evaluate
 
 
 def main():
@@ -116,7 +117,8 @@ def main():
 
         print(args.model_name)
 
-    evaluate(args.saved_model_name, test_loader, save_path='./saved_images')
+    evaluate(args.saved_model_name, test_loader = valid_loader, save_path='./saved_images')
+
 
 if __name__ == '__main__':
     freeze_support()  
