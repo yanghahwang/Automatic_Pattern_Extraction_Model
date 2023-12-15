@@ -4,14 +4,13 @@ import argparse,math,numpy as np
 from models import CTranModel
 from models import CTranModelCub
 from config_args import get_args
-import utils.evaluate as evaluate
+from utils.evaluate import compute_metrics
 import utils.logger as logger
 from pdb import set_trace as stop
 from optim_schedule import WarmupLinearSchedule
 from run_epoch import run_epoch
 from load_data import get_data
 from multiprocessing import freeze_support
-from image_evaluate import evaluate
 
 
 def main():
@@ -52,7 +51,7 @@ def main():
             data_loader =valid_loader
         
         all_preds,all_targs,all_masks,all_ids,test_loss,test_loss_unk = run_epoch(args,model,data_loader,None,1,'Testing')
-        test_metrics = evaluate.compute_metrics(args,all_preds,all_targs,all_masks,test_loss,test_loss_unk,0,args.test_known_labels)
+        test_metrics = compute_metrics(args,all_preds,all_targs,all_masks,test_loss,test_loss_unk,0,args.test_known_labels)
 
         exit(0)
 
@@ -90,18 +89,18 @@ def main():
         train_loader.dataset.epoch = epoch
         ################### Train #################
         all_preds,all_targs,all_masks,all_ids,train_loss,train_loss_unk = run_epoch(args,model,train_loader,optimizer,epoch,'Training',train=True,warmup_scheduler=scheduler_warmup)
-        train_metrics = evaluate.compute_metrics(args,all_preds,all_targs,all_masks,train_loss,train_loss_unk,0,args.train_known_labels)
+        train_metrics = compute_metrics(args,all_preds,all_targs,all_masks,train_loss,train_loss_unk,0,args.train_known_labels)
         loss_logger.log_losses('train.log',epoch,train_loss,train_metrics,train_loss_unk)
 
         ################### Valid #################
         all_preds,all_targs,all_masks,all_ids,valid_loss,valid_loss_unk = run_epoch(args,model,valid_loader,None,epoch,'Validating')
-        valid_metrics = evaluate.compute_metrics(args,all_preds,all_targs,all_masks,valid_loss,valid_loss_unk,0,args.test_known_labels)
+        valid_metrics = compute_metrics(args,all_preds,all_targs,all_masks,valid_loss,valid_loss_unk,0,args.test_known_labels)
         loss_logger.log_losses('valid.log',epoch,valid_loss,valid_metrics,valid_loss_unk)
 
         ################### Test #################
         if test_loader is not None:
             all_preds,all_targs,all_masks,all_ids,test_loss,test_loss_unk = run_epoch(args,model,test_loader,None,epoch,'Testing')
-            test_metrics = evaluate.compute_metrics(args,all_preds,all_targs,all_masks,test_loss,test_loss_unk,0,args.test_known_labels)
+            test_metrics = compute_metrics(args,all_preds,all_targs,all_masks,test_loss,test_loss_unk,0,args.test_known_labels)
         else:
             test_loss,test_loss_unk,test_metrics = valid_loss,valid_loss_unk,valid_metrics
         loss_logger.log_losses('test.log',epoch,test_loss,test_metrics,test_loss_unk)
@@ -116,8 +115,6 @@ def main():
         best_valid,best_test = metrics_logger.evaluate(train_metrics,valid_metrics,test_metrics,epoch,0,model,valid_loss,test_loss,all_preds,all_targs,all_ids,args)
 
         print(args.model_name)
-
-    evaluate(args.saved_model_name, test_loader = valid_loader, save_path='./saved_images')
 
 
 if __name__ == '__main__':
